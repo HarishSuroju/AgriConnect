@@ -92,6 +92,18 @@ const farmer = {
     transport: "Transport: {{value}}",
     saved: "saved {{value}}",
     pickup: "Pickup: {{date}}",
+    actions: {
+      accept: "Accept",
+      reject: "Reject",
+    },
+    decision: {
+      acceptedTitle: "Request accepted",
+      acceptedDescription: "Industry has been notified.",
+      rejectedTitle: "Request rejected",
+      rejectedDescription: "Industry has been notified of rejection.",
+      acceptedNotification: "Farmer accepted your purchase request for {{cropType}}.",
+      rejectedNotification: "Farmer rejected your purchase request for {{cropType}}.",
+    },
     report: {
       button: "Report Industry",
       title: "Report Industrialist",

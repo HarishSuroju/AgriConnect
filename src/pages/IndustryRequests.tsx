@@ -26,13 +26,12 @@ const StatusBadge = ({ status }: { status: string }) => {
 const IndustryRequests = () => {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [pickupDates, setPickupDates] = useState<Record<string, string>>({});
   const [expandedTx, setExpandedTx] = useState<string | null>(null);
   const [reportingTxId, setReportingTxId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [reportDetails, setReportDetails] = useState('');
   const [reporting, setReporting] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ id: string; type: 'accept' | 'reject' | 'complete' } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ id: string; type: 'complete' } | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const { t: translate } = useTranslation(['common', 'industry']);
@@ -99,39 +98,19 @@ const IndustryRequests = () => {
 
   const doAction = async () => {
     if (!confirmAction) return;
-    const { id, type } = confirmAction;
-
-    if (type === 'accept') {
-      const pickupDate = pickupDates[id] || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
-      const { error } = await supabase.from('transactions').update({ status: 'accepted', pickup_date: pickupDate }).eq('id', id);
-      if (!error) {
-        toast({ title: translate('requests.acceptedToastTitle', { ns: 'industry' }), description: translate('requests.acceptedToastDescription', { ns: 'industry' }) });
-        const tx = transactions.find(t => t.id === id);
-        if (tx) {
-          await supabase.from('notifications').insert({ user_id: tx.farmer_id, message: translate('requests.acceptedNotification', { ns: 'industry', date: pickupDate }), type: 'success' });
-          if (tx.listing_id) await supabase.from('residue_listings').update({ status: 'pending' }).eq('id', tx.listing_id);
-        }
-      }
-    } else if (type === 'reject') {
-      const { error } = await supabase.from('transactions').update({ status: 'rejected' }).eq('id', id);
-      if (!error) {
-        toast({ title: translate('requests.rejectedToastTitle', { ns: 'industry' }), variant: 'destructive' });
-        const tx = transactions.find(t => t.id === id);
-        if (tx) await supabase.from('notifications').insert({ user_id: tx.farmer_id, message: translate('requests.rejectedNotification', { ns: 'industry' }), type: 'warning' });
-      }
-    } else {
-      const tx = transactions.find(t => t.id === id);
-      const carbonSaved = tx ? Number(tx.quantity) * 1500 : 0;
-      const creditPoints = tx ? Number(tx.quantity) * 10 : 0;
-      const { error } = await supabase.from('transactions').update({ status: 'completed', carbon_saved: carbonSaved, credit_points: creditPoints }).eq('id', id);
-      if (!error) {
-        toast({ title: translate('requests.completedToastTitle', { ns: 'industry' }), description: translate('requests.completedToastDescription', { ns: 'industry' }) });
-        if (tx) {
-          await supabase.from('notifications').insert({ user_id: tx.farmer_id, message: translate('requests.completedNotification', { ns: 'industry', quantity: Number(tx.quantity), credits: creditPoints }), type: 'success' });
-          if (tx.listing_id) await supabase.from('residue_listings').update({ status: 'completed' }).eq('id', tx.listing_id);
-        }
+    const { id } = confirmAction;
+    const tx = transactions.find(t => t.id === id);
+    const carbonSaved = tx ? Number(tx.quantity) * 1500 : 0;
+    const creditPoints = tx ? Number(tx.quantity) * 10 : 0;
+    const { error } = await supabase.from('transactions').update({ status: 'completed', carbon_saved: carbonSaved, credit_points: creditPoints }).eq('id', id);
+    if (!error) {
+      toast({ title: translate('requests.completedToastTitle', { ns: 'industry' }), description: translate('requests.completedToastDescription', { ns: 'industry' }) });
+      if (tx) {
+        await supabase.from('notifications').insert({ user_id: tx.farmer_id, message: translate('requests.completedNotification', { ns: 'industry', quantity: Number(tx.quantity), credits: creditPoints }), type: 'success' });
+        if (tx.listing_id) await supabase.from('residue_listings').update({ status: 'completed' }).eq('id', tx.listing_id);
       }
     }
+
     setConfirmAction(null);
     fetchData();
   };
@@ -195,20 +174,9 @@ const IndustryRequests = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       {t.status === 'pending' && (
-                        <>
-                          <input
-                            type="date"
-                            value={pickupDates[t.id] || ''}
-                            onChange={e => setPickupDates(p => ({ ...p, [t.id]: e.target.value }))}
-                            className="px-2 py-1.5 rounded-lg border border-input bg-background text-xs"
-                          />
-                          <button onClick={() => setConfirmAction({ id: t.id, type: 'accept' })} className="px-3 py-1.5 rounded-lg bg-success text-success-foreground text-xs font-medium hover:bg-success/90 transition-colors flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> {translate('requests.accept', { ns: 'industry' })}
-                          </button>
-                          <button onClick={() => setConfirmAction({ id: t.id, type: 'reject' })} className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors flex items-center gap-1">
-                            <XCircle className="w-3 h-3" /> {translate('requests.reject', { ns: 'industry' })}
-                          </button>
-                        </>
+                        <span className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground text-xs font-medium">
+                          Awaiting farmer response
+                        </span>
                       )}
                       {t.status === 'accepted' && (
                         <button onClick={() => setConfirmAction({ id: t.id, type: 'complete' })} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors">
@@ -288,10 +256,10 @@ const IndustryRequests = () => {
 
       <ConfirmDialog
         open={!!confirmAction}
-        title={confirmAction?.type === 'accept' ? translate('requests.confirm.acceptTitle', { ns: 'industry' }) : confirmAction?.type === 'reject' ? translate('requests.confirm.rejectTitle', { ns: 'industry' }) : translate('requests.confirm.completeTitle', { ns: 'industry' })}
-        message={confirmAction?.type === 'accept' ? translate('requests.confirm.acceptMessage', { ns: 'industry' }) : confirmAction?.type === 'reject' ? translate('requests.confirm.rejectMessage', { ns: 'industry' }) : translate('requests.confirm.completeMessage', { ns: 'industry' })}
-        confirmLabel={confirmAction?.type === 'reject' ? translate('requests.confirm.reject', { ns: 'industry' }) : translate('requests.confirm.confirm', { ns: 'industry' })}
-        variant={confirmAction?.type === 'reject' ? 'danger' : 'success'}
+        title={translate('requests.confirm.completeTitle', { ns: 'industry' })}
+        message={translate('requests.confirm.completeMessage', { ns: 'industry' })}
+        confirmLabel={translate('requests.confirm.confirm', { ns: 'industry' })}
+        variant="success"
         onConfirm={doAction}
         onCancel={() => setConfirmAction(null)}
       />

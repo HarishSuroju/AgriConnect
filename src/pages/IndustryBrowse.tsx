@@ -83,11 +83,16 @@ const IndustryBrowse = () => {
       toast({ title: t('browse.errorTitle', { ns: 'industry' }), description: error.message, variant: 'destructive' });
     } else {
       toast({ title: t('browse.requestSentTitle', { ns: 'industry' }), description: t('browse.requestSentDescription', { ns: 'industry', quantity: qty, cropType: listing.crop_type }) });
-      await supabase.from('notifications').insert({
+      const { error: notifyError } = await supabase.from('notifications').insert({
         user_id: listing.farmer_id,
         message: t('browse.notificationMessage', { ns: 'industry', company: user.companyName || t('roles.industry', { ns: 'common' }), quantity: qty, cropType: listing.crop_type }),
         type: 'success',
       });
+
+      if (notifyError) {
+        toast({ title: t('browse.errorTitle', { ns: 'industry' }), description: notifyError.message, variant: 'destructive' });
+      }
+
       fetchData();
     }
   };

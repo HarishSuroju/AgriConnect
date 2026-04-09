@@ -109,6 +109,51 @@ const FarmerRequests = () => {
 
   const filtered = filter === 'all' ? myTransactions : myTransactions.filter(t => t.status === filter);
 
+  const handleRequestDecision = async (transaction: any, nextStatus: 'accepted' | 'rejected') => {
+    const updatePayload = nextStatus === 'accepted'
+      ? {
+          status: 'accepted',
+          pickup_date: transaction.pickup_date || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+        }
+      : { status: 'rejected' };
+
+    const { error } = await supabase.from('transactions').update(updatePayload).eq('id', transaction.id);
+    if (error) {
+      toast({
+        title: translate('listing.errorTitle', { ns: 'farmer' }),
+        description: error.message,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (nextStatus === 'accepted' && transaction.listing_id) {
+      await supabase.from('residue_listings').update({ status: 'pending' }).eq('id', transaction.listing_id);
+    }
+
+    const industryMessage = nextStatus === 'accepted'
+      ? translate('requests.decision.acceptedNotification', { ns: 'farmer', cropType: transaction.crop_type })
+      : translate('requests.decision.rejectedNotification', { ns: 'farmer', cropType: transaction.crop_type });
+
+    await supabase.from('notifications').insert({
+      user_id: transaction.industry_id,
+      message: industryMessage,
+      type: nextStatus === 'accepted' ? 'success' : 'warning',
+    });
+
+    toast({
+      title: nextStatus === 'accepted'
+        ? translate('requests.decision.acceptedTitle', { ns: 'farmer' })
+        : translate('requests.decision.rejectedTitle', { ns: 'farmer' }),
+      description: nextStatus === 'accepted'
+        ? translate('requests.decision.acceptedDescription', { ns: 'farmer' })
+        : translate('requests.decision.rejectedDescription', { ns: 'farmer' }),
+      variant: nextStatus === 'accepted' ? 'default' : 'destructive',
+    });
+
+    fetchData();
+  };
+
   const statusCounts = {
     all: myTransactions.length,
     pending: myTransactions.filter(t => t.status === 'pending').length,
@@ -205,12 +250,30 @@ const FarmerRequests = () => {
                     <StatusBadge status={t.status} />
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <button
-                      onClick={() => startReport(t.id)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-                    >
-                      {translate('requests.report.button', { ns: 'farmer' })}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {t.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleRequestDecision(t, 'accepted')}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-success text-success-foreground hover:bg-success/90 transition-colors"
+                          >
+                            {translate('requests.actions.accept', { ns: 'farmer' })}
+                          </button>
+                          <button
+                            onClick={() => handleRequestDecision(t, 'rejected')}
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
+                          >
+                            {translate('requests.actions.reject', { ns: 'farmer' })}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => startReport(t.id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+                      >
+                        {translate('requests.report.button', { ns: 'farmer' })}
+                      </button>
+                    </div>
                   </div>
 
                   {reportingTxId === t.id && (

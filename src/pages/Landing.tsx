@@ -441,12 +441,12 @@ const Landing = () => {
         {/* Animated Background Elements */}
         <motion.div
           className="absolute top-20 right-10 w-96 h-96 rounded-full bg-primary/20 blur-3xl"
-          animate={{ float: [0, 30, 0] }}
+          animate={{ y: [0, 30, 0] }}
           transition={{ duration: 6, repeat: Infinity }}
         />
         <motion.div
           className="absolute bottom-20 left-10 w-80 h-80 rounded-full bg-accent/20 blur-3xl"
-          animate={{ float: [0, -30, 0] }}
+          animate={{ y: [0, -30, 0] }}
           transition={{ duration: 8, repeat: Infinity }}
         />
 

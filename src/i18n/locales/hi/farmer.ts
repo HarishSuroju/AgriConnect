@@ -92,6 +92,18 @@ const farmer = {
     transport: "परिवहन: {{value}}",
     saved: "{{value}} की बचत",
     pickup: "पिकअप: {{date}}",
+    actions: {
+      accept: "स्वीकार करें",
+      reject: "अस्वीकार करें",
+    },
+    decision: {
+      acceptedTitle: "अनुरोध स्वीकार किया गया",
+      acceptedDescription: "उद्योग को सूचित कर दिया गया है।",
+      rejectedTitle: "अनुरोध अस्वीकार किया गया",
+      rejectedDescription: "अस्वीकृति के बारे में उद्योग को सूचित कर दिया गया है।",
+      acceptedNotification: "किसान ने {{cropType}} के लिए आपका खरीद अनुरोध स्वीकार कर लिया है।",
+      rejectedNotification: "किसान ने {{cropType}} के लिए आपका खरीद अनुरोध अस्वीकार कर दिया है।",
+    },
     report: {
       button: "उद्योग की रिपोर्ट करें",
       title: "औद्योगिक उपयोगकर्ता की रिपोर्ट करें",

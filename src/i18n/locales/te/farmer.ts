@@ -92,6 +92,18 @@ const farmer = {
     transport: "రవాణా: {{value}}",
     saved: "{{value}} సేవ్ అయింది",
     pickup: "పికప్: {{date}}",
+    actions: {
+      accept: "ఆమోదించండి",
+      reject: "తిరస్కరించండి",
+    },
+    decision: {
+      acceptedTitle: "అభ్యర్థన ఆమోదించబడింది",
+      acceptedDescription: "పరిశ్రమకు సమాచారం పంపబడింది.",
+      rejectedTitle: "అభ్యర్థన తిరస్కరించబడింది",
+      rejectedDescription: "తిరస్కరణ గురించి పరిశ్రమకు సమాచారం పంపబడింది.",
+      acceptedNotification: "{{cropType}} కోసం మీ కొనుగోలు అభ్యర్థనను రైతు ఆమోదించారు.",
+      rejectedNotification: "{{cropType}} కోసం మీ కొనుగోలు అభ్యర్థనను రైతు తిరస్కరించారు.",
+    },
     report: {
       button: "పరిశ్రమను రిపోర్ట్ చేయండి",
       title: "పరిశ్రమ వినియోగదారుని రిపోర్ట్ చేయండి",
