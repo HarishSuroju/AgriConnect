@@ -9,7 +9,7 @@ AgriConnect is a crop residue exchange platform built for three user groups:
 ## Stack
 
 - React 18
-- TypeScript
+- JavaScript
 - Vite
 - Tailwind CSS
 - shadcn/ui and Radix UI
