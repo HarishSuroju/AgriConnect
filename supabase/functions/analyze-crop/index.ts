@@ -52,15 +52,22 @@ serve(async (req: Request) => {
         content: [
           {
             type: "text",
-            text: `You are an agricultural AI expert. Analyze this crop residue image and provide:
-1. **cropType**: The type of crop residue (must be one of: "Paddy", "Wheat", "Sugarcane"). If unsure, use "${cropTypeHint || 'Paddy'}" as default.
+            text: `You are an agricultural AI expert. First, check whether this image actually shows crop residue, straw, husk, stalks, or harvested agricultural plant material.
+
+If it does NOT show crop residue (for example: a diagram, screenshot, document, unrelated photo, person, or any non-agricultural image), respond ONLY with:
+{"isCropImage":false,"analysis":"A brief 1 sentence description of what the image actually shows instead."}
+
+If it DOES show crop residue, analyze it and respond ONLY with valid JSON in this exact format:
+{"isCropImage":true,"cropType":"Paddy","moisture":18,"qualityGrade":"A","confidence":92,"analysis":"Clean paddy straw with low moisture, suitable for biomass conversion."}
+
+Field rules when isCropImage is true:
+1. **cropType**: The type of crop residue (must be one of: "Paddy", "Wheat", "Sugarcane"). If unsure which of these three, use "${cropTypeHint || 'Paddy'}" as default, but isCropImage should still be true since it is genuinely crop residue.
 2. **moisture**: Estimated moisture level as a percentage (integer between 10-30). Look at color, texture, and apparent dryness.
 3. **qualityGrade**: Grade the quality as "A" (clean, dry, minimal contamination), "B" (moderate quality), or "C" (wet, contaminated, or mixed).
 4. **confidence**: Your confidence in this analysis as a percentage (integer between 70-99).
 5. **analysis**: A brief 1-2 sentence description of what you observe.
 
-Respond ONLY with valid JSON in this exact format:
-{"cropType":"Paddy","moisture":18,"qualityGrade":"A","confidence":92,"analysis":"Clean paddy straw with low moisture, suitable for biomass conversion."}`,
+Do not guess a crop type for an image that clearly isn't crop residue. Be honest in the isCropImage check even if a cropTypeHint was provided, the hint is only a fallback label, not a reason to say yes.`,
           },
           ...(imageBase64
             ? [
@@ -211,6 +218,32 @@ Respond ONLY with valid JSON: {"cropType":"...","moisture":...,"qualityGrade":".
       };
       
       return new Response(JSON.stringify(fallback), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // If the model determined this isn't actually a crop residue image, don't
+    // fabricate a confident-looking analysis for it. Report it distinctly so
+    // the frontend can show a clear rejection instead of fake data.
+    if (imageBase64 && result?.isCropImage === false) {
+      console.info("[analyze-crop][rejected:not-crop-image] Image is not crop residue", {
+        modelNote: result.analysis,
+        ...requestInfo,
+      });
+
+      const rejected = {
+        debugCase: "rejected:not-crop-image",
+        isCropImage: false,
+        cropType: null,
+        moisture: null,
+        qualityGrade: null,
+        confidence: 0,
+        analysis:
+          result.analysis ||
+          "This image doesn't appear to show crop residue. Please upload a clear photo of the actual crop residue.",
+      };
+
+      return new Response(JSON.stringify(rejected), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

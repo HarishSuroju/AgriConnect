@@ -2,3 +2,6 @@ project_id = "jncutfofscjcdxlfxbtp"
 
 [functions.analyze-crop]
 verify_jwt = false
+
+[functions.ai-match-assistant]
+verify_jwt = true

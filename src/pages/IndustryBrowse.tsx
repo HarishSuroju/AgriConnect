@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { toast } from '@/hooks/use-toast';
 import { calculateDistance, TRANSPORT_RATE, CLUSTER_RADIUS_KM, CLUSTER_DISCOUNT } from '@/data/mockData';
 import { useTranslation } from 'react-i18next';
+import AIMatchAssistant from '@/components/AIMatchAssistant';
 
 const IndustryBrowse = () => {
   const { user } = useAuth();
@@ -116,6 +117,8 @@ const IndustryBrowse = () => {
             {t('browse.subtitle', { ns: 'industry', defaultValue: 'Discover and purchase quality crop residue from verified farmers' })}
           </p>
         </motion.div>
+
+        <AIMatchAssistant industryLat={industryProfile?.lat} industryLng={industryProfile?.lng} />
 
         {availableListings.length === 0 ? (
           <motion.div

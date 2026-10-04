@@ -12,6 +12,7 @@ interface AIAnalysisResult {
   detectedCropType?: string;
   analysis?: string;
   isFallback?: boolean;
+  isRejected?: boolean;
 }
 
 interface AIAnalysisPanelProps {
@@ -74,12 +75,28 @@ export default function AIAnalysisPanel({ cropType, onAnalysisComplete, trigger,
           debugCase?: string;
           debugStatus?: number;
           debugReason?: string;
-          cropType: string;
-          moisture: number;
-          qualityGrade: 'A' | 'B' | 'C';
+          isCropImage?: boolean;
+          cropType: string | null;
+          moisture: number | null;
+          qualityGrade: 'A' | 'B' | 'C' | null;
           confidence: number;
           analysis: string;
         };
+
+        if (aiResult.debugCase === 'rejected:not-crop-image') {
+          console.warn('[AIAnalysisPanel] analyze-crop rejected: image is not crop residue', {
+            analysis: aiResult.analysis,
+          });
+          return {
+            moisture: 0,
+            grade: 'B',
+            confidence: 0,
+            adjustedPrice: 0,
+            detectedCropType: undefined,
+            analysis: aiResult.analysis,
+            isRejected: true,
+          };
+        }
 
         const isFallback = Boolean(aiResult.debugCase && aiResult.debugCase !== 'success');
 
@@ -98,17 +115,21 @@ export default function AIAnalysisPanel({ cropType, onAnalysisComplete, trigger,
           console.info('[AIAnalysisPanel] analyze-crop case:', aiResult.debugCase || 'success');
         }
 
+        const resolvedCropType = aiResult.cropType || cropType;
+        const resolvedMoisture = aiResult.moisture ?? 18;
+        const resolvedGrade = aiResult.qualityGrade ?? 'B';
+
         return {
-          moisture: aiResult.moisture,
-          grade: aiResult.qualityGrade,
+          moisture: resolvedMoisture,
+          grade: resolvedGrade,
           confidence: aiResult.confidence,
           adjustedPrice: adjustPriceForQuality(
-            CROP_PRICES[aiResult.cropType] || CROP_PRICES[cropType] || 1500,
-            aiResult.cropType || cropType,
-            aiResult.moisture,
-            aiResult.qualityGrade
+            CROP_PRICES[resolvedCropType] || CROP_PRICES[cropType] || 1500,
+            resolvedCropType,
+            resolvedMoisture,
+            resolvedGrade
           ),
-          detectedCropType: aiResult.cropType,
+          detectedCropType: aiResult.cropType || undefined,
           analysis: aiResult.analysis,
           isFallback,
         };
@@ -175,6 +196,21 @@ export default function AIAnalysisPanel({ cropType, onAnalysisComplete, trigger,
                 />
               </div>
             ))}
+          </div>
+        </div>
+      ) : result?.isRejected ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+          <div className="flex items-start gap-2">
+            <FileText className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-destructive">
+                {t('ai.notCropImage', { defaultValue: "This doesn't look like crop residue" })}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{result.analysis}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('ai.notCropImageHint', { defaultValue: 'Please upload a clear photo of the actual crop residue to continue.' })}
+              </p>
+            </div>
           </div>
         </div>
       ) : result ? (
